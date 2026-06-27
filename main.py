@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
@@ -10,7 +12,8 @@ from database import Base, engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 API_KEY_NAME = "X-API-Key"
-API_KEY = "secret-task-key"
+# Read from environment variable; fall back to default for local dev only
+API_KEY = os.getenv("API_KEY", "secret-task-key")
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
