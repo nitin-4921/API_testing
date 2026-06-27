@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Task Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 4px;
+    }
+
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 24px; }
+
+    /* API Key bar */
+    .key-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: #1e293b;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .key-bar label { font-size: 0.85rem; color: #94a3b8; white-space: nowrap; }
+    .key-bar input {
+      flex: 1;
+      min-width: 200px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .key-bar input:focus { outline: none; border-color: #38bdf8; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #166534;
+      color: #bbf7d0;
+      display: none;
+    }
+    .badge.show { display: inline; }
+
+    /* Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #7dd3fc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card h2 span { font-size: 1.1rem; }
+
+    /* Form elements */
+    label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #38bdf8; }
+
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+
+    button {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-blue  { background: #0284c7; color: #fff; }
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-yellow{ background: #ca8a04; color: #fff; }
+    .btn-red   { background: #dc2626; color: #fff; }
+
+    /* Response box */
+    .response {
+      margin-top: 12px;
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.8rem;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #94a3b8;
+      display: none;
+    }
+    .response.show { display: block; }
+    .response.ok  { border-color: #166534; color: #86efac; }
+    .response.err { border-color: #7f1d1d; color: #fca5a5; }
+
+    /* Task list */
+    .task-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .task-item {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+    }
+    .task-item .task-title { font-weight: 600; color: #e2e8f0; }
+    .task-item .task-meta  { color: #64748b; font-size: 0.78rem; margin-top: 2px; }
+    .task-item .done { color: #4ade80; }
+    .task-item .pending { color: #facc15; }
+    .empty { color: #475569; font-size: 0.85rem; text-align: center; padding: 16px; }
+  </style>
+</head>
+<body>
+
+  <h1>📋 Task Manager</h1>
+  <p class="subtitle">FastAPI + SQLite — test your API directly from the browser</p>
+
+  <!-- API Key -->
+  <div class="key-bar">
+    <label>🔑 API Key</label>
+    <input id="apiKey" type="text" placeholder="Enter your API key" value="your-secret-key-here" />
+    <span class="badge" id="keyBadge">✓ Key set</span>
+  </div>
+
+  <div class="grid">
+
+    <!-- CREATE -->
+    <div class="card">
+      <h2><span>➕</span> Create Task</h2>
+      <label>Title *</label>
+      <input type="text" id="c-title" placeholder="Task title" />
+      <label>Description</label>
+      <textarea id="c-desc" rows="2" placeholder="Optional description"></textarea>
+      <label>Due Date</label>
+      <input type="text" id="c-due" placeholder="e.g. 2026-07-01" />
+      <label>Completed</label>
+      <select id="c-done">
+        <option value="false">No</option>
+        <option value="true">Yes</option>
+      </select>
+      <button class="btn-green" onclick="createTask()">Create Task</button>
+      <div class="response" id="r-create"></div>
+    </div>
+
+    <!-- LIST -->
+    <div class="card">
+      <h2><span>📄</span> List Tasks</h2>
+      <div class="row">
+        <div>
+          <label>Filter completed</label>
+          <select id="l-filter">
+            <option value="">All</option>
+            <option value="true">Completed</option>
+            <option value="false">Pending</option>
+          </select>
+        </div>
+        <div>
+          <label>Limit</label>
+          <input type="number" id="l-limit" value="20" min="1" max="100" />
+        </div>
+      </div>
+      <button class="btn-blue" onclick="listTasks()">Fetch Tasks</button>
+      <div class="task-list" id="task-list"></div>
+      <div class="response" id="r-list"></div>
+    </div>
+
+    <!-- GET ONE -->
+    <div class="card">
+      <h2><span>🔍</span> Get Task by ID</h2>
+      <label>Task ID</label>
+      <input type="number" id="g-id" placeholder="e.g. 1" min="1" />
+      <button class="btn-blue" onclick="getTask()">Get Task</button>
+      <div class="response" id="r-get"></div>
+    </div>
+
+    <!-- UPDATE -->
+    <div class="card">
+      <h2><span>✏️</span> Update Task</h2>
+      <label>Task ID *</label>
+      <input type="number" id="u-id" placeholder="e.g. 1" min="1" />
+      <label>New Title (leave blank to skip)</label>
+      <input type="text" id="u-title" placeholder="Updated title" />
+      <label>New Description</label>
+      <textarea id="u-desc" rows="2" placeholder="Updated description"></textarea>
+      <label>Mark Completed</label>
+      <select id="u-done">
+        <option value="">— no change —</option>
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+      <button class="btn-yellow" onclick="updateTask()">Update Task</button>
+      <div class="response" id="r-update"></div>
+    </div>
+
+    <!-- DELETE -->
+    <div class="card">
+      <h2><span>🗑️</span> Delete Task</h2>
+      <label>Task ID</label>
+      <input type="number" id="d-id" placeholder="e.g. 1" min="1" />
+      <button class="btn-red" onclick="deleteTask()">Delete Task</button>
+      <div class="response" id="r-delete"></div>
+    </div>
+
+  </div>
+
+  <script>
+    const BASE = window.location.origin;
+
+    // Show badge when key is typed
+    document.getElementById('apiKey').addEventListener('input', function () {
+      const badge = document.getElementById('keyBadge');
+      badge.classList.toggle('show', this.value.trim().length > 0);
+    });
+    // Init badge
+    document.getElementById('keyBadge').classList.add('show');
+
+    function headers() {
+      return {
+        'Content-Type': 'application/json',
+        'X-API-Key': document.getElementById('apiKey').value.trim()
+      };
+    }
+
+    function show(id, data, ok) {
+      const el = document.getElementById(id);
+      el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      el.className = 'response show ' + (ok ? 'ok' : 'err');
+    }
+
+    async function createTask() {
+      const title = document.getElementById('c-title').value.trim();
+      if (!title) { show('r-create', 'Title is required.', false); return; }
+      const body = {
+        title,
+        description: document.getElementById('c-desc').value.trim() || null,
+        due_date: document.getElementById('c-due').value.trim() || null,
+        completed: document.getElementById('c-done').value === 'true'
+      };
+      try {
+        const res = await fetch(`${BASE}/tasks/`, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+        const data = await res.json();
+        show('r-create', data, res.ok);
+        if (res.ok) {
+          document.getElementById('c-title').value = '';
+          document.getElementById('c-desc').value = '';
+          document.getElementById('c-due').value = '';
+        }
+      } catch (e) { show('r-create', e.message, false); }
+    }
+
+    async function listTasks() {
+      const filter = document.getElementById('l-filter').value;
+      const limit  = document.getElementById('l-limit').value;
+      let url = `${BASE}/tasks/?limit=${limit}`;
+      if (filter !== '') url += `&completed=${filter}`;
+      try {
+        const res  = await fetch(url, { headers: headers() });
+        const data = await res.json();
+        show('r-list', data, res.ok);
+        renderList(res.ok ? data : []);
+      } catch (e) { show('r-list', e.message, false); }
+    }
+
+    function renderList(tasks) {
+      const el = document.getElementById('task-list');
+      if (!tasks.length) { el.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
+      el.innerHTML = tasks.map(t => `
+        <div class="task-item">
+          <div class="task-title">#${t.id} — ${t.title}</div>
+          <div class="task-meta">
+            ${t.description ? t.description + ' &nbsp;|&nbsp; ' : ''}
+            <span class="${t.completed ? 'done' : 'pending'}">${t.completed ? '✓ Done' : '⏳ Pending'}</span>
+            ${t.due_date ? ' &nbsp;|&nbsp; Due: ' + t.due_date : ''}
+          </div>
+        </div>`).join('');
+    }
+
+    async function getTask() {
+      const id = document.getElementById('g-id').value;
+      if (!id) { show('r-get', 'Enter a task ID.', false); return; }
+      try {
+        const res  = await fetch(`${BASE}/tasks/${id}`, { headers: headers() });
+        const data = await res.json();
+        show('r-get', data, res.ok);
+      } catch (e) { show('r-get', e.message, false); }
+    }
+
+    async function updateTask() {
+      const id = document.getElementById('u-id').value;
+      if (!id) { show('r-update', 'Enter a task ID.', false); return; }
+      const body = {};
+      const title = document.getElementById('u-title').value.trim();
+      const desc  = document.getElementById('u-desc').value.trim();
+      const done  = document.getElementById('u-done').value;
+      if (title) body.title = title;
+      if (desc)  body.description = desc;
+      if (done !== '') body.completed = done === 'true';
+      if (!Object.keys(body).length) { show('r-update', 'Fill at least one field to update.', false); return; }
+      try {
+        const res  = await fetch(`${BASE}/tasks/${id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
+        const data = await res.json();
+        show('r-update', data, res.ok);
+      } catch (e) { show('r-update', e.message, false); }
+    }
+
+    async function deleteTask() {
+      const id = document.getElementById('d-id').value;
+      if (!id) { show('r-delete', 'Enter a task ID.', false); return; }
+      if (!confirm(`Delete task #${id}? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`${BASE}/tasks/${id}`, { method: 'DELETE', headers: headers() });
+        if (res.status === 204) {
+          show('r-delete', `Task #${id} deleted successfully.`, true);
+        } else {
+          const data = await res.json();
+          show('r-delete', data, false);
+        }
+      } catch (e) { show('r-delete', e.message, false); }
+    }
+  </script>
+</body>
+</html>

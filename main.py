@@ -2,6 +2,8 @@ import os
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Security, status
 from fastapi.security import APIKeyHeader
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 import crud
@@ -32,6 +34,14 @@ app = FastAPI(
     version="1.0.0",
     dependencies=[Depends(get_api_key)],
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# Serve the UI without requiring an API key
+@app.get("/", include_in_schema=False, dependencies=[])
+def serve_ui():
+    return FileResponse("static/index.html")
 
 
 @app.post("/tasks/", response_model=schemas.TaskOut, status_code=status.HTTP_201_CREATED)
